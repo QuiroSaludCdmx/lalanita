@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0f0f0f">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Caja Personal</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    :root {
+      --bg:       #0f0f0f;
+      --surface:  #161616;
+      --border:   #242424;
+      --muted:    #3a3a3a;
+      --dim:      #666;
+      --text:     #e8e8e8;
+      --white:    #ffffff;
+      --green:    #4ade80;
+      --red:      #f87171;
+      --accent:   #facc15;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bot: env(safe-area-inset-bottom, 0px);
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      overscroll-behavior: none;
+    }
+
+    /* ── Layout shell ── */
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100dvh;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    /* ── Header ── */
+    header {
+      padding: calc(var(--safe-top) + 16px) 20px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      background: var(--bg);
+    }
+    .header-left h1 {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--white);
+      letter-spacing: -0.5px;
+    }
+    .header-left span {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      color: var(--dim);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .balance {
+      text-align: right;
+    }
+    .balance-label {
+      font-size: 9px;
+      color: var(--dim);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+    .balance-amount {
+      font-family: 'DM Mono', monospace;
+      font-size: 16px;
+      font-weight: 500;
+    }
+    .balance-amount.pos { color: var(--green); }
+    .balance-amount.neg { color: var(--red); }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      padding: 12px 20px;
+      gap: 8px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      background: var(--bg);
+    }
+    .tab {
+      flex: 1;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--dim);
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .tab.active {
+      background: var(--white);
+      color: var(--bg);
+      border-color: var(--white);
+      font-weight: 500;
+    }
+
+    /* ── Scrollable content ── */
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* ── Formulario ── */
+    .form-panel {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .field-label {
+      font-size: 9px;
+      color: var(--dim);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 6px;
+      font-family: 'DM Mono', monospace;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.15s;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    input[type="text"]:focus,
+    input[type="number"]:focus,
+    select:focus {
+      border-color: var(--muted);
+    }
+    input::placeholder { color: var(--muted); }
+
+    /* Monto grande */
+    .amount-input {
+      font-family: 'DM Mono', monospace !important;
+      font-size: 26px !important;
+      font-weight: 500 !important;
+      text-align: center;
+      letter-spacing: -1px;
+    }
+
+    .row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    /* Toggle tipo */
+    .type-toggle {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .type-btn {
+      padding: 13px;
+      border: none;
+      background: transparent;
+      color: var(--dim);
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .type-btn.active-expense {
+      background: var(--red);
+      color: #0f0f0f;
+      font-weight: 500;
+    }
+    .type-btn.active-income {
+      background: var(--green);
+      color: #0f0f0f;
+      font-weight: 500;
+    }
+
+    .btn-register {
+      width: 100%;
+      padding: 16px;
+      border-radius: 12px;
+      border: none;
+      background: var(--accent);
+      color: #0f0f0f;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      margin-top: 4px;
+    }
+    .btn-register:active { opacity: 0.8; }
+
+    .error-msg {
+      color: var(--red);
+      font-size: 11px;
+      font-family: 'DM Mono', monospace;
+      text-align: center;
+    }
+
+    /* ── Resumen del día ── */
+    .day-summary {
+      padding: 16px 20px 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+    .summary-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+    .summary-card .s-label {
+      font-size: 8px;
+      color: var(--dim);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-family: 'DM Mono', monospace;
+    }
+    .summary-card .s-val {
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      font-weight: 500;
+      margin-top: 2px;
+    }
+
+    /* ── Lista ── */
+    .list-panel { padding: 16px 20px; }
+
+    .day-group { margin-bottom: 24px; }
+    .day-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .day-title {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      color: var(--dim);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+    .day-net {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .tx-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 6px;
+    }
+    .tx-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .tx-dot.income { background: var(--green); }
+    .tx-dot.expense { background: var(--red); }
+
+    .tx-body { flex: 1; min-width: 0; }
+    .tx-desc {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .tx-meta {
+      font-family: 'DM Mono', monospace;
+      font-size: 9px;
+      color: var(--dim);
+      margin-top: 2px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .tx-right { text-align: right; flex-shrink: 0; }
+    .tx-amount {
+      font-family: 'DM Mono', monospace;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .tx-amount.income { color: var(--green); }
+    .tx-amount.expense { color: var(--text); }
+    .tx-del {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 16px;
+      cursor: pointer;
+      padding: 4px;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+    .tx-del:active { color: var(--red); }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+      font-size: 13px;
+      font-family: 'DM Mono', monospace;
+    }
+
+    /* ── Panel exportar ── */
+    .export-panel {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .export-panel h2 {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--dim);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-family: 'DM Mono', monospace;
+      margin-bottom: 4px;
+    }
+    .export-info {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--dim);
+      line-height: 1.8;
+    }
+    .export-info strong { color: var(--text); }
+    .btn-export {
+      width: 100%;
+      padding: 16px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: border-color 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .btn-export:active { border-color: var(--accent); }
+    .btn-export .icon { font-size: 18px; }
+    .btn-export.primary {
+      background: var(--accent);
+      color: #0f0f0f;
+      border-color: var(--accent);
+      font-weight: 800;
+    }
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 4px 0;
+    }
+
+    /* ── Bottom nav ── */
+    .bottom-nav {
+      display: flex;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+      background: var(--bg);
+      padding-bottom: var(--safe-bot);
+    }
+    .nav-btn {
+      flex: 1;
+      padding: 14px 8px;
+      border: none;
+      background: transparent;
+      color: var(--dim);
+      font-family: 'DM Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      transition: color 0.15s;
+    }
+    .nav-btn .nav-icon { font-size: 20px; }
+    .nav-btn.active { color: var(--accent); }
+
+    select option { background: #1a1a1a; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="header-left">
+      <h1>Caja Personal</h1>
+      <span id="header-count">0 registros</span>
+    </div>
+    <div class="balance">
+      <div class="balance-label">Balance</div>
+      <div class="balance-amount pos" id="balance-display">$0.00</div>
+    </div>
+  </header>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('registro')">Registrar</button>
+    <button class="tab" onclick="switchTab('historial')">Historial</button>
+    <button class="tab" onclick="switchTab('exportar')">Exportar</button>
+  </div>
+
+  <!-- Content -->
+  <div class="content" id="content">
+
+    <!-- TAB: REGISTRO -->
+    <div id="tab-registro">
+      <div class="form-panel">
+
+        <div>
+          <div class="field-label">Tipo de movimiento</div>
+          <div class="type-toggle">
+            <button class="type-btn active-expense" id="btn-expense" onclick="setType('expense')">▼ Gasto</button>
+            <button class="type-btn" id="btn-income" onclick="setType('income')">▲ Ingreso</button>
+          </div>
+        </div>
+
+        <div>
+          <div class="field-label">Monto</div>
+          <input type="number" inputmode="decimal" class="amount-input" id="input-amount" placeholder="0.00" step="0.01" min="0">
+        </div>
+
+        <div>
+          <div class="field-label">Concepto</div>
+          <input type="text" id="input-desc" placeholder="Ej: Comida, Uber, Sueldo…">
+        </div>
+
+        <div class="row-2">
+          <div>
+            <div class="field-label">Categoría</div>
+            <select id="input-cat">
+              <option>Alimentación</option>
+              <option>Transporte</option>
+              <option>Vivienda</option>
+              <option>Servicios</option>
+              <option>Salud</option>
+              <option>Ocio</option>
+              <option>Otros</option>
+            </select>
+          </div>
+          <div>
+            <div class="field-label">Hora</div>
+            <input type="text" id="input-time" readonly style="color:var(--dim); cursor:default;">
+          </div>
+        </div>
+
+        <div id="form-error" class="error-msg" style="display:none;"></div>
+        <button class="btn-register" onclick="addEntry()">REGISTRAR</button>
+      </div>
+    </div>
+
+    <!-- TAB: HISTORIAL -->
+    <div id="tab-historial" style="display:none;">
+      <div class="day-summary" id="today-summary"></div>
+      <div class="list-panel" id="list-container"></div>
+    </div>
+
+    <!-- TAB: EXPORTAR -->
+    <div id="tab-exportar" style="display:none;">
+      <div class="export-panel">
+        <h2>Exportar datos</h2>
+        <div class="export-info" id="export-info">
+          Calculando…
+        </div>
+        <div class="divider"></div>
+        <button class="btn-export primary" onclick="exportCSV()">
+          <span>Descargar CSV completo</span>
+          <span class="icon">📊</span>
+        </button>
+        <button class="btn-export" onclick="exportBackup()">
+          <span>Respaldo JSON</span>
+          <span class="icon">💾</span>
+        </button>
+        <button class="btn-export" onclick="document.getElementById('import-file').click()">
+          <span>Restaurar desde respaldo</span>
+          <span class="icon">📥</span>
+        </button>
+        <input type="file" id="import-file" accept=".json" style="display:none" onchange="importBackup(event)">
+      </div>
+    </div>
+
+  </div><!-- /content -->
+
+</div><!-- /app -->
+
+<script>
+// ── Estado ─────────────────────────────────────────────────────────────────
+const STORAGE_KEY = "caja_pwa_v1";
+let transactions = [];
+let currentType = "expense";
+let activeTab = "registro";
+
+// ── Persistencia (localStorage — Android Chrome es estable) ────────────────
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    transactions = raw ? JSON.parse(raw) : [];
+  } catch { transactions = []; }
+}
+
+function saveData() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+  } catch(e) {
+    console.error("Error guardando:", e);
+  }
+}
+
+// ── Utilidades ─────────────────────────────────────────────────────────────
+const CATS = ["Alimentación","Transporte","Vivienda","Servicios","Salud","Ocio","Otros"];
+
+function fmt(n) {
+  return "$" + n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function fmtDate(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString("es-MX", { weekday:"short", day:"2-digit", month:"short", year:"numeric" });
+}
+
+function fmtTime(iso) {
+  return new Date(iso).toLocaleTimeString("es-MX", { hour:"2-digit", minute:"2-digit" });
+}
+
+function dayKey(iso) {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+
+// ── Clock en el formulario ──────────────────────────────────────────────────
+function updateClock() {
+  const el = document.getElementById("input-time");
+  if (el) el.value = new Date().toLocaleTimeString("es-MX", { hour:"2-digit", minute:"2-digit", second:"2-digit" });
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ── Tipo gasto/ingreso ──────────────────────────────────────────────────────
+function setType(t) {
+  currentType = t;
+  const be = document.getElementById("btn-expense");
+  const bi = document.getElementById("btn-income");
+  be.className = "type-btn" + (t === "expense" ? " active-expense" : "");
+  bi.className = "type-btn" + (t === "income"  ? " active-income"  : "");
+}
+
+// ── Agregar entrada ─────────────────────────────────────────────────────────
+function addEntry() {
+  const desc   = document.getElementById("input-desc").value.trim();
+  const amount = parseFloat(document.getElementById("input-amount").value);
+  const cat    = document.getElementById("input-cat").value;
+  const errEl  = document.getElementById("form-error");
+
+  if (!desc) { showError("Escribe un concepto."); return; }
+  if (!amount || amount <= 0) { showError("Ingresa un monto válido."); return; }
+
+  errEl.style.display = "none";
+
+  const entry = {
+    id:     Date.now(),
+    date:   new Date().toISOString(),
+    desc,
+    amount,
+    type:   currentType,
+    cat
+  };
+
+  transactions.unshift(entry);
+  saveData();
+  updateUI();
+
+  // Limpiar solo monto y concepto
+  document.getElementById("input-amount").value = "";
+  document.getElementById("input-desc").value   = "";
+  document.getElementById("input-amount").focus();
+
+  // Flash feedback
+  const btn = document.querySelector(".btn-register");
+  btn.textContent = "✓ GUARDADO";
+  setTimeout(() => btn.textContent = "REGISTRAR", 1200);
+}
+
+function showError(msg) {
+  const el = document.getElementById("form-error");
+  el.textContent = msg;
+  el.style.display = "block";
+}
+
+// ── Eliminar ────────────────────────────────────────────────────────────────
+function deleteEntry(id) {
+  transactions = transactions.filter(t => t.id !== id);
+  saveData();
+  updateUI();
+}
+
+// ── Render ──────────────────────────────────────────────────────────────────
+function updateUI() {
+  // Balance header
+  const balance = transactions.reduce((acc, t) => t.type === "income" ? acc + t.amount : acc - t.amount, 0);
+  const balEl   = document.getElementById("balance-display");
+  balEl.textContent = fmt(balance);
+  balEl.className   = "balance-amount " + (balance >= 0 ? "pos" : "neg");
+
+  // Contador
+  document.getElementById("header-count").textContent = transactions.length + " registros";
+
+  // Resumen de hoy
+  renderTodaySummary();
+
+  // Lista agrupada por día
+  renderList();
+
+  // Info exportar
+  renderExportInfo();
+}
+
+function renderTodaySummary() {
+  const todayKey = dayKey(new Date().toISOString());
+  const todayTx  = transactions.filter(t => dayKey(t.date) === todayKey);
+  const inc = todayTx.filter(t => t.type === "income").reduce((a,t) => a + t.amount, 0);
+  const exp = todayTx.filter(t => t.type === "expense").reduce((a,t) => a + t.amount, 0);
+  const net = inc - exp;
+
+  const el = document.getElementById("today-summary");
+  if (todayTx.length === 0) { el.innerHTML = ""; return; }
+
+  el.innerHTML = `
+    <div class="summary-card">
+      <div class="s-label">Hoy · gastos</div>
+      <div class="s-val" style="color:var(--red)">${fmt(exp)}</div>
+    </div>
+    <div class="summary-card">
+      <div class="s-label">Hoy · ingresos</div>
+      <div class="s-val" style="color:var(--green)">${fmt(inc)}</div>
+    </div>
+    <div class="summary-card">
+      <div class="s-label">Hoy · neto</div>
+      <div class="s-val" style="color:${net >= 0 ? 'var(--green)' : 'var(--red)'}">${fmt(net)}</div>
+    </div>
+  `;
+}
+
+function renderList() {
+  const container = document.getElementById("list-container");
+  if (transactions.length === 0) {
+    container.innerHTML = '<div class="empty-state">sin registros aún</div>';
+    return;
+  }
+
+  // Agrupar por día
+  const groups = {};
+  transactions.forEach(t => {
+    const k = dayKey(t.date);
+    if (!groups[k]) groups[k] = { label: fmtDate(t.date), items: [], inc: 0, exp: 0 };
+    t.type === "income" ? groups[k].inc += t.amount : groups[k].exp += t.amount;
+    groups[k].items.push(t);
+  });
+
+  const sortedKeys = Object.keys(groups).sort((a, b) => b.localeCompare(a));
+
+  container.innerHTML = sortedKeys.map(k => {
+    const g   = groups[k];
+    const net = g.inc - g.exp;
+    const netColor = net >= 0 ? "var(--green)" : "var(--red)";
+
+    const items = g.items.map(t => `
+      <div class="tx-item">
+        <span class="tx-dot ${t.type}"></span>
+        <div class="tx-body">
+          <div class="tx-desc">${escHtml(t.desc)}</div>
+          <div class="tx-meta">${t.cat} · ${fmtTime(t.date)}</div>
+        </div>
+        <div class="tx-right">
+          <div class="tx-amount ${t.type}">${t.type === "income" ? "+" : "−"}${fmt(t.amount)}</div>
+        </div>
+        <button class="tx-del" onclick="deleteEntry(${t.id})">×</button>
+      </div>
+    `).join("");
+
+    return `
+      <div class="day-group">
+        <div class="day-header">
+          <span class="day-title">${g.label}</span>
+          <span class="day-net" style="color:${netColor}">${fmt(net)}</span>
+        </div>
+        ${items}
+      </div>
+    `;
+  }).join("");
+}
+
+function renderExportInfo() {
+  const el = document.getElementById("export-info");
+  if (!el) return;
+  const total = transactions.length;
+  if (total === 0) { el.innerHTML = "Sin registros aún."; return; }
+
+  const inc = transactions.filter(t => t.type === "income").reduce((a,t) => a + t.amount, 0);
+  const exp = transactions.filter(t => t.type === "expense").reduce((a,t) => a + t.amount, 0);
+  const days = new Set(transactions.map(t => dayKey(t.date))).size;
+  const first = new Date(transactions[transactions.length - 1].date).toLocaleDateString("es-MX");
+  const last  = new Date(transactions[0].date).toLocaleDateString("es-MX");
+
+  el.innerHTML = `
+    <strong>${total} registros</strong> en <strong>${days} días</strong><br>
+    Primer registro: ${first}<br>
+    Último registro: ${last}<br>
+    Total ingresos: <strong style="color:var(--green)">${fmt(inc)}</strong><br>
+    Total gastos: <strong style="color:var(--red)">${fmt(exp)}</strong>
+  `;
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+// ── Exportar CSV ────────────────────────────────────────────────────────────
+function exportCSV() {
+  if (transactions.length === 0) { alert("No hay registros para exportar."); return; }
+
+  const header = "fecha,hora,tipo,categoria,concepto,monto";
+  const lines  = transactions.map(t => {
+    const d = new Date(t.date);
+    return [
+      d.toLocaleDateString("es-MX"),
+      d.toLocaleTimeString("es-MX", { hour:"2-digit", minute:"2-digit" }),
+      t.type === "income" ? "ingreso" : "gasto",
+      t.cat,
+      `"${t.desc.replace(/"/g,'""')}"`,
+      t.amount.toFixed(2)
+    ].join(",");
+  });
+
+  const csv  = [header, ...lines].join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" }); // BOM para Excel
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href     = url;
+  a.download = `caja_${new Date().toISOString().split("T")[0]}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── Respaldo / Restaurar JSON ───────────────────────────────────────────────
+function exportBackup() {
+  const blob = new Blob([JSON.stringify(transactions, null, 2)], { type: "application/json" });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href     = url;
+  a.download = `caja_backup_${new Date().toISOString().split("T")[0]}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importBackup(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (Array.isArray(data)) {
+        if (confirm(`¿Restaurar ${data.length} registros? Esto reemplaza los datos actuales.`)) {
+          transactions = data;
+          saveData();
+          updateUI();
+        }
+      }
+    } catch { alert("Archivo inválido."); }
+  };
+  reader.readAsText(file);
+  e.target.value = "";
+}
+
+// ── Tabs ────────────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  ["registro","historial","exportar"].forEach(t => {
+    document.getElementById("tab-" + t).style.display = t === tab ? "block" : "none";
+  });
+  document.querySelectorAll(".tab").forEach((btn, i) => {
+    btn.classList.toggle("active", ["registro","historial","exportar"][i] === tab);
+  });
+  activeTab = tab;
+  if (tab === "historial" || tab === "exportar") updateUI();
+}
+
+// ── Service Worker ──────────────────────────────────────────────────────────
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("./sw.js").catch(() => {});
+}
+
+// ── Solicitar persistencia de storage ──────────────────────────────────────
+if (navigator.storage && navigator.storage.persist) {
+  navigator.storage.persist();
+}
+
+// ── Init ────────────────────────────────────────────────────────────────────
+loadData();
+updateUI();
+</script>
+</body>
+</html>
